@@ -1,0 +1,17 @@
+<h2 class="card__title" id="message-history-title">Message History ({{ messages().length }})</h2>
+
+@if (error(); as message) {
+  <p class="history__state history__state--error" role="alert">{{ message }}</p>
+} @else if (loading()) {
+  <p class="history__state" role="status">Loading messages…</p>
+} @else if (messages().length === 0) {
+  <p class="history__state">No messages yet</p>
+} @else {
+  <ul class="history__list" tabindex="0" aria-labelledby="message-history-title">
+    @for (message of messages(); track message.id) {
+      <li class="history__item">
+        <app-message-card [message]="message" />
+      </li>
+    }
+  </ul>
+}

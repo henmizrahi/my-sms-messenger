@@ -1,7 +1,6 @@
 import { AbstractControl, ValidationErrors } from '@angular/forms';
 
-// These rules mirror the Message model in the Rails API.
-export const MAX_BODY_LENGTH = 250;
+// Mirrors the phone rules of the Message model in the Rails API.
 const E164_FORMAT = /^\+[1-9]\d{7,14}$/;
 
 export function normalizePhone(value: string): string {

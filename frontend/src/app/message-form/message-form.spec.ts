@@ -47,6 +47,13 @@ describe('MessageForm', () => {
     await fixture.whenStable();
   });
 
+  it('shows its heading and labels the form with it', () => {
+    const heading = element.querySelector('h2.card__title');
+
+    expect(heading?.textContent).toBe('New Message');
+    expect(element.querySelector('form')?.getAttribute('aria-labelledby')).toBe(heading?.id);
+  });
+
   describe('validation', () => {
     it('shows no errors before a field is touched', () => {
       expect(fieldErrors()).toEqual([]);

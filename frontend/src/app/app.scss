@@ -1,3 +1,5 @@
+@use '../styles/breakpoints';
+
 .page {
   // 884px of cards (two 426px columns and a 32px gap, as in the wireframe) plus side padding.
   max-width: calc(55.25rem + 2 * var(--space-4));
@@ -27,14 +29,7 @@
   box-shadow: var(--shadow-card);
 }
 
-.card__title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-@media (max-width: 48rem) {
+@media (max-width: breakpoints.$stacked-layout) {
   .page__cards {
     grid-template-columns: minmax(0, 1fr);
   }

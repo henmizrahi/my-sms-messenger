@@ -1,3 +1,6 @@
+// Mirrors the body length limit of the Message model in the Rails API.
+export const MAX_BODY_LENGTH = 250;
+
 export type MessageStatus = 'queued' | 'sent' | 'failed';
 
 export interface Message {

@@ -1,4 +1,12 @@
-<form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+<h2 class="card__title" id="new-message-title">New Message</h2>
+
+<form
+  class="form"
+  aria-labelledby="new-message-title"
+  [formGroup]="form"
+  (ngSubmit)="submit()"
+  novalidate
+>
   <div class="field">
     <label class="field__label" for="message-to">Phone Number</label>
     <input

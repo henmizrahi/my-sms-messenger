@@ -11,8 +11,8 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
-import { NewMessage } from '../message';
-import { e164, MAX_BODY_LENGTH, normalizePhone, notBlank } from './message-validators';
+import { MAX_BODY_LENGTH, NewMessage } from '../message';
+import { e164, normalizePhone, notBlank } from './message-validators';
 
 @Component({
   imports: [ReactiveFormsModule],

@@ -3,12 +3,11 @@
 
   <div class="page__cards">
     <section class="card" aria-labelledby="new-message-title">
-      <h2 class="card__title" id="new-message-title">New Message</h2>
       <app-message-form />
     </section>
 
     <section class="card" aria-labelledby="message-history-title">
-      <h2 class="card__title" id="message-history-title">Message History</h2>
+      <app-message-history [messages]="[]" />
     </section>
   </div>
 </main>

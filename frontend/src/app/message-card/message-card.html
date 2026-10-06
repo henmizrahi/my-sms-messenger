@@ -1,0 +1,22 @@
+<article class="message">
+  <header class="message__header">
+    <span class="message__to">{{ message().to }}</span>
+    <time class="message__date" [attr.datetime]="message().createdAt">
+      {{ message().createdAt | date: dateFormat : 'UTC' }}
+    </time>
+  </header>
+
+  <p class="message__body">{{ message().body }}</p>
+
+  <footer class="message__footer">
+    @if (failed()) {
+      <p class="message__failure">
+        <span class="message__badge">Failed</span>
+        @if (message().errorMessage; as reason) {
+          <span class="message__error">{{ reason }}</span>
+        }
+      </p>
+    }
+    <span class="message__counter">{{ message().body.length }}/{{ maxBodyLength }}</span>
+  </footer>
+</article>
