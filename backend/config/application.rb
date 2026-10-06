@@ -40,5 +40,15 @@ module MySmsMessenger
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # API mode drops cookies and sessions; add them back so each browser gets
+    # an anonymous session that scopes the messages it can see.
+    config.session_store :cookie_store,
+      key: "_mysms_session",
+      httponly: true,
+      same_site: :lax,
+      secure: Rails.env.production?
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use config.session_store, config.session_options
   end
 end
