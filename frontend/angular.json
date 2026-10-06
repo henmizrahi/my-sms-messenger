@@ -29,6 +29,8 @@
               }
             ],
             "styles": [
+              "@fontsource/roboto/latin-400.css",
+              "@fontsource/roboto/latin-700.css",
               "src/styles.scss"
             ]
           },

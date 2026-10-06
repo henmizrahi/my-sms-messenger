@@ -1,0 +1,31 @@
+:root {
+  --font-family: Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+
+  --color-page: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-text: #000000;
+
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-9: 2.25rem;
+  --space-14: 3.5rem;
+
+  --radius-card: 10px;
+  --shadow-card: 0 3px 10px rgb(0 0 0 / 18%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: 1rem;
+  line-height: 1.5;
+}

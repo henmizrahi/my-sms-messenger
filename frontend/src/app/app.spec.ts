@@ -2,22 +2,35 @@ import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 
 describe('App', () => {
+  let element: HTMLElement;
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
     }).compileComponents();
-  });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it('should render the title', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toBe('MY SMS MESSENGER');
+    element = fixture.nativeElement as HTMLElement;
+  });
+
+  it('renders the page title', () => {
+    expect(element.querySelector('h1')?.textContent).toBe('MY SMS MESSENGER');
+  });
+
+  it('renders the New Message and Message History cards, in that order', () => {
+    const titles = Array.from(element.querySelectorAll('.card h2')).map((h2) => h2.textContent);
+
+    expect(titles).toEqual(['New Message', 'Message History']);
+  });
+
+  it('labels each card with its heading', () => {
+    const cards = Array.from(element.querySelectorAll('section.card'));
+
+    for (const card of cards) {
+      const heading = card.querySelector('h2');
+      expect(card.getAttribute('aria-labelledby')).toBe(heading?.id);
+    }
+    expect(cards.length).toBe(2);
   });
 });
