@@ -54,7 +54,7 @@
   margin-top: var(--space-4);
 }
 
-@media (max-width: breakpoints.$stacked-layout) {
+@media (width < breakpoints.$stacked-layout) {
   :host {
     height: auto;
     min-height: 0;

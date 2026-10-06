@@ -1,2 +1,3 @@
-// Below this width the two cards stack in a single column.
-$stacked-layout: 48rem;
+// Below this width the two cards stack in a single column. At this width and above,
+// each card is wide enough for a message's phone number and date to share one line.
+$stacked-layout: 60rem;
