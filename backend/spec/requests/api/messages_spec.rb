@@ -4,7 +4,7 @@ RSpec.describe "Messages API", type: :request do
   let(:valid_params) { { to: "+1 (555) 123-4567", body: "Hello there" } }
 
   describe "POST /api/messages" do
-    it "creates a queued message and returns it" do
+    it "saves the message, sends it and returns it as sent" do
       post "/api/messages", params: valid_params, as: :json
 
       expect(response).to have_http_status(:created)
@@ -14,23 +14,41 @@ RSpec.describe "Messages API", type: :request do
         "id" => Message.last.id.to_s,
         "to" => "+15551234567",
         "body" => "Hello there",
-        "status" => "queued",
+        "status" => "sent",
         "errorMessage" => nil
       )
       expect(json["createdAt"]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\z/)
+      expect(Message.last.twilio_sid).to start_with("FAKE")
+    end
+
+    it "returns 201 with status failed and the reason when sending fails" do
+      post "/api/messages", params: { to: FakeSmsSender::FAILING_NUMBER, body: "Hello there" }, as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body).to include("status" => "failed", "errorMessage" => "Invalid 'To' phone number")
+      expect(Message.last).to have_attributes(status: "failed", twilio_sid: nil)
+    end
+
+    it "does not try to send an invalid message" do
+      allow(SmsSender).to receive(:build)
+
+      post "/api/messages", params: { to: "12345", body: "Hello there" }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(SmsSender).not_to have_received(:build)
     end
 
     it "ignores session_id, status and twilio_sid sent by the client" do
       post "/api/messages",
-        params: valid_params.merge(session_id: "someone-else", status: "sent", twilio_sid: "SM123"),
+        params: valid_params.merge(session_id: "someone-else", status: "failed", twilio_sid: "SM123"),
         as: :json
 
       expect(response).to have_http_status(:created)
       message = Message.last
       expect(message.session_id).to be_present
       expect(message.session_id).not_to eq("someone-else")
-      expect(message.status).to eq("queued")
-      expect(message.twilio_sid).to be_nil
+      expect(message.status).to eq("sent")
+      expect(message.twilio_sid).to start_with("FAKE")
     end
 
     it "rejects a missing body with 422 and saves nothing" do

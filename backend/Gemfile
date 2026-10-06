@@ -6,6 +6,8 @@ gem "rails", "~> 8.1.4"
 gem "puma", ">= 5.0"
 # MongoDB object-document mapper, used instead of Active Record [https://www.mongodb.com/docs/mongoid/current/]
 gem "mongoid", "~> 9.1"
+# Twilio API client for sending SMS [https://github.com/twilio/twilio-ruby]
+gem "twilio-ruby", "~> 7.11"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 # gem "jbuilder"
 

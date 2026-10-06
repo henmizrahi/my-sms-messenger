@@ -12,6 +12,7 @@ module Api
       message.session_id = current_session_id
 
       if message.save
+        MessageDelivery.new.call(message)
         render json: MessageSerializer.render(message), status: :created
       else
         render json: { errors: message.errors.messages }, status: :unprocessable_content

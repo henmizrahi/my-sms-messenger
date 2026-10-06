@@ -1,5 +1,7 @@
 require 'spec_helper'
 ENV['RAILS_ENV'] ||= 'test'
+# Specs must never send real SMS, whatever SMS_PROVIDER is set to in .env.
+ENV['SMS_PROVIDER'] = 'fake'
 require_relative '../config/environment'
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 
