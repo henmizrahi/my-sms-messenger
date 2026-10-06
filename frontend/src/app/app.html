@@ -3,11 +3,20 @@
 
   <div class="page__cards">
     <section class="card" aria-labelledby="new-message-title">
-      <app-message-form />
+      <app-message-form
+        [sending]="sending()"
+        [errorMessage]="sendError()"
+        [sentMessageId]="sentMessageId()"
+        (submitted)="send($event)"
+      />
     </section>
 
     <section class="card" aria-labelledby="message-history-title">
-      <app-message-history [messages]="[]" />
+      <app-message-history
+        [messages]="messagesService.messages()"
+        [loading]="messagesService.loading()"
+        [error]="messagesService.error()"
+      />
     </section>
   </div>
 </main>
