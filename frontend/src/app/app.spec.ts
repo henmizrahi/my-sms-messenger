@@ -24,6 +24,12 @@ describe('App', () => {
     expect(titles).toEqual(['New Message', 'Message History']);
   });
 
+  it('shows the message form in the New Message card', () => {
+    const newMessageCard = element.querySelector('section[aria-labelledby="new-message-title"]');
+
+    expect(newMessageCard?.querySelector('app-message-form form')).not.toBeNull();
+  });
+
   it('labels each card with its heading', () => {
     const cards = Array.from(element.querySelectorAll('section.card'));
 

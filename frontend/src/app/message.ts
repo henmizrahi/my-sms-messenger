@@ -8,3 +8,5 @@ export interface Message {
   errorMessage: string | null;
   createdAt: string;
 }
+
+export type NewMessage = Pick<Message, 'to' | 'body'>;

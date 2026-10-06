@@ -1,0 +1,70 @@
+<form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div class="field">
+    <label class="field__label" for="message-to">Phone Number</label>
+    <input
+      class="field__control"
+      id="message-to"
+      type="tel"
+      formControlName="to"
+      placeholder="+15551234567"
+      autocomplete="tel"
+      [attr.aria-invalid]="showErrors(form.controls.to)"
+      [attr.aria-describedby]="showErrors(form.controls.to) ? 'message-to-error' : null"
+    />
+    @if (showErrors(form.controls.to)) {
+      <p class="field__error" id="message-to-error">
+        @if (form.controls.to.hasError('required')) {
+          Phone number is required.
+        } @else {
+          Enter the number in international format, for example +15551234567.
+        }
+      </p>
+    }
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="message-body">Message</label>
+    <textarea
+      class="field__control field__control--multiline"
+      id="message-body"
+      formControlName="body"
+      [attr.aria-invalid]="showErrors(form.controls.body)"
+      [attr.aria-describedby]="
+        showErrors(form.controls.body)
+          ? 'message-body-error message-body-counter'
+          : 'message-body-counter'
+      "
+    ></textarea>
+    <div class="field__footer">
+      @if (showErrors(form.controls.body)) {
+        <p class="field__error" id="message-body-error">
+          @if (form.controls.body.hasError('required')) {
+            Message is required.
+          } @else {
+            Message must be {{ maxBodyLength }} characters or fewer.
+          }
+        </p>
+      }
+      <span
+        class="field__counter"
+        id="message-body-counter"
+        [class.field__counter--over]="bodyLength().length > maxBodyLength"
+      >
+        {{ bodyLength().length }}/{{ maxBodyLength }}
+      </span>
+    </div>
+  </div>
+
+  @if (visibleError(); as message) {
+    <p class="form__error" role="alert">{{ message }}</p>
+  }
+
+  <div class="form__actions">
+    <button class="form__clear" type="button" [disabled]="sending()" (click)="clear()">
+      Clear
+    </button>
+    <button class="form__submit" type="submit" [disabled]="form.invalid || sending()">
+      {{ sending() ? 'Sending…' : 'Submit' }}
+    </button>
+  </div>
+</form>

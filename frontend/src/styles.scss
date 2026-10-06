@@ -1,17 +1,28 @@
 :root {
   --font-family: Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-size-sm: 0.875rem;
+  --font-size-xs: 0.75rem;
 
   --color-page: #f5f5f5;
   --color-surface: #ffffff;
   --color-text: #000000;
+  --color-text-muted: #6c6c6c;
+  --color-border: #8e8e8e;
+  --color-danger: #b3261e;
 
+  --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
   --space-4: 1rem;
+  --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-9: 2.25rem;
   --space-14: 3.5rem;
 
   --radius-card: 10px;
+  --radius-control: 5px;
   --shadow-card: 0 3px 10px rgb(0 0 0 / 18%);
 }
 
