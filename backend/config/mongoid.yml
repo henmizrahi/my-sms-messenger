@@ -1,0 +1,29 @@
+# MONGODB_URI supplies the cluster address and credentials only. The database
+# name is set per environment under `options`, which the driver applies over
+# any database named in the URI, so tests can never write to development data.
+# (Mongoid rejects a top-level `database` key when `uri` is present.)
+development:
+  clients:
+    default:
+      uri: <%= ENV.fetch("MONGODB_URI") %>
+      options:
+        database: mysms_development
+        server_selection_timeout: 5
+
+test:
+  clients:
+    default:
+      uri: <%= ENV.fetch("MONGODB_URI") %>
+      options:
+        database: mysms_test
+        server_selection_timeout: 5
+        read:
+          mode: :primary
+        max_pool_size: 1
+
+production:
+  clients:
+    default:
+      uri: <%= ENV.fetch("MONGODB_URI") %>
+      options:
+        database: mysms_production
