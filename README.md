@@ -92,7 +92,7 @@ Sending a message:
 3. The Angular dev server proxies the request to Rails.
 4. `Api::MessagesController#create` builds a `Message` for the current session and saves it with status `queued`. Invalid input returns `422` with the validation errors.
 5. `MessageDelivery` sends the message through the configured SMS sender and updates it to `sent` (with the provider's ID) or `failed` (with the reason).
-6. The controller returns `201` with the message as JSON. The service puts it at the top of the list and the form clears.
+6. The controller returns `201` with the message as JSON. The service then reloads the history from the API, and the form clears.
 
 Loading the history is `GET /api/messages`, which returns the current session's messages, newest first. A compound index on `session_id` and `created_at` serves that query.
 

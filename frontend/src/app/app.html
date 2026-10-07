@@ -16,6 +16,7 @@
         [messages]="messagesService.messages()"
         [loading]="messagesService.loading()"
         [error]="messagesService.error()"
+        (retry)="messagesService.load()"
       />
     </section>
   </div>

@@ -30,6 +30,9 @@ describe('MessageHistory', () => {
   const state = () => element.querySelector('.history__state');
   const cards = () => Array.from(element.querySelectorAll('app-message-card'));
 
+  const errorMessage = () => element.querySelector('.history__message')?.textContent.trim();
+  const retryButton = () => element.querySelector<HTMLButtonElement>('.history__retry');
+
   async function render(inputs: { messages: Message[]; loading?: boolean; error?: string | null }) {
     for (const [name, value] of Object.entries(inputs)) {
       fixture.componentRef.setInput(name, value);
@@ -109,20 +112,44 @@ describe('MessageHistory', () => {
       expect(state()?.textContent.trim()).toBe('Loading messages…');
       expect(state()?.getAttribute('role')).toBe('status');
     });
+
+    it('keeps showing the current messages while they are reloaded', async () => {
+      await render({ messages, loading: true });
+
+      expect(cards().length).toBe(2);
+      expect(state()).toBeNull();
+    });
   });
 
   describe('error state', () => {
     it('shows the error as an alert', async () => {
       await render({ messages: [], error: 'Could not load your messages.' });
 
-      expect(state()?.textContent.trim()).toBe('Could not load your messages.');
+      expect(errorMessage()).toBe('Could not load your messages.');
       expect(state()?.getAttribute('role')).toBe('alert');
     });
 
     it('takes priority over the loading state', async () => {
       await render({ messages: [], loading: true, error: 'Could not load your messages.' });
 
-      expect(state()?.textContent.trim()).toBe('Could not load your messages.');
+      expect(errorMessage()).toBe('Could not load your messages.');
+    });
+
+    it('offers a Try again button that emits retry', async () => {
+      let retries = 0;
+      fixture.componentInstance.retry.subscribe(() => retries++);
+      await render({ messages: [], error: 'Could not load your messages.' });
+
+      expect(retryButton()?.textContent).toBe('Try again');
+      retryButton()?.click();
+
+      expect(retries).toBe(1);
+    });
+
+    it('shows no Try again button outside the error state', async () => {
+      await render({ messages: [] });
+
+      expect(retryButton()).toBeNull();
     });
   });
 });

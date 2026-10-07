@@ -1,8 +1,11 @@
 <h2 class="card__title" id="message-history-title">Message History ({{ messages().length }})</h2>
 
 @if (error(); as message) {
-  <p class="history__state history__state--error" role="alert">{{ message }}</p>
-} @else if (loading()) {
+  <div class="history__state history__state--error" role="alert">
+    <p class="history__message">{{ message }}</p>
+    <button class="history__retry" type="button" (click)="retry.emit()">Try again</button>
+  </div>
+} @else if (loading() && messages().length === 0) {
   <p class="history__state" role="status">Loading messages…</p>
 } @else if (messages().length === 0) {
   <p class="history__state">No messages yet</p>

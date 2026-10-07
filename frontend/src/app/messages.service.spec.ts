@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { Message } from './message';
+import { Message, NewMessage } from './message';
 import { MessagesService } from './messages.service';
 
 const olderMessage: Message = {
@@ -85,32 +85,74 @@ describe('MessagesService', () => {
   });
 
   describe('send', () => {
+    const created = { status: 201, statusText: 'Created' };
+
+    // Lets the service continue past an awaited response and issue its next request.
+    const nextRequest = () => new Promise((resolve) => setTimeout(resolve));
+
     async function loadMessages(messages: Message[]) {
       const loaded = service.load();
       http.expectOne('/api/messages').flush(messages);
       await loaded;
     }
 
+    async function sendAndReload(newMessage: NewMessage, saved: Message, reloaded: Message[]) {
+      const sent = service.send(newMessage);
+      http.expectOne({ method: 'POST', url: '/api/messages' }).flush(saved, created);
+      await nextRequest();
+      http.expectOne({ method: 'GET', url: '/api/messages' }).flush(reloaded);
+
+      return sent;
+    }
+
     it('posts the new message and reports it as saved', async () => {
       const sent = service.send({ to: '+15557654321', body: 'The newer message.' });
-      const request = http.expectOne('/api/messages');
+      const request = http.expectOne({ method: 'POST', url: '/api/messages' });
 
-      expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ to: '+15557654321', body: 'The newer message.' });
 
-      request.flush(newerMessage, { status: 201, statusText: 'Created' });
+      request.flush(newerMessage, created);
+      await nextRequest();
+      http.expectOne({ method: 'GET', url: '/api/messages' }).flush([newerMessage]);
 
       expect(await sent).toEqual({ outcome: 'saved', message: newerMessage });
     });
 
-    it('adds the saved message to the top of the list without refetching', async () => {
+    it('reloads the list from the server after a message is saved', async () => {
       await loadMessages([olderMessage]);
 
-      const sent = service.send({ to: '+15557654321', body: 'The newer message.' });
-      http.expectOne('/api/messages').flush(newerMessage, { status: 201, statusText: 'Created' });
-      await sent;
+      await sendAndReload({ to: '+15557654321', body: 'The newer message.' }, newerMessage, [
+        newerMessage,
+        olderMessage,
+      ]);
 
       expect(service.messages()).toEqual([newerMessage, olderMessage]);
+      expect(service.loading()).toBe(false);
+    });
+
+    it('recovers the history when the first load failed and a later send succeeds', async () => {
+      const failed = service.load();
+      http.expectOne('/api/messages').error(new ProgressEvent('error'));
+      await failed;
+      expect(service.error()).not.toBeNull();
+
+      await sendAndReload({ to: '+15557654321', body: 'The newer message.' }, newerMessage, [
+        newerMessage,
+        olderMessage,
+      ]);
+
+      expect(service.error()).toBeNull();
+      expect(service.messages()).toEqual([newerMessage, olderMessage]);
+    });
+
+    it('still reports the message as saved when the reload fails, and sets the load error', async () => {
+      const sent = service.send({ to: '+15557654321', body: 'The newer message.' });
+      http.expectOne({ method: 'POST', url: '/api/messages' }).flush(newerMessage, created);
+      await nextRequest();
+      http.expectOne({ method: 'GET', url: '/api/messages' }).error(new ProgressEvent('error'));
+
+      expect(await sent).toEqual({ outcome: 'saved', message: newerMessage });
+      expect(service.error()).toBe('Could not load your messages. Please try again.');
     });
 
     it('reports a message saved with status failed as saved, and lists it', async () => {
@@ -120,14 +162,17 @@ describe('MessagesService', () => {
         errorMessage: 'Invalid number',
       };
 
-      const sent = service.send({ to: '+15005550001', body: 'The newer message.' });
-      http.expectOne('/api/messages').flush(failedMessage, { status: 201, statusText: 'Created' });
+      const result = await sendAndReload(
+        { to: '+15005550001', body: 'The newer message.' },
+        failedMessage,
+        [failedMessage],
+      );
 
-      expect(await sent).toEqual({ outcome: 'saved', message: failedMessage });
+      expect(result).toEqual({ outcome: 'saved', message: failedMessage });
       expect(service.messages()).toEqual([failedMessage]);
     });
 
-    it('reports the validation errors on 422 and leaves the list alone', async () => {
+    it('reports the validation errors on 422 without reloading', async () => {
       await loadMessages([olderMessage]);
 
       const sent = service.send({ to: '12345', body: '' });
@@ -145,7 +190,7 @@ describe('MessagesService', () => {
       expect(service.messages()).toEqual([olderMessage]);
     });
 
-    it('reports an error when the network fails', async () => {
+    it('reports an error when the network fails, without reloading', async () => {
       const sent = service.send({ to: '+15557654321', body: 'The newer message.' });
       http.expectOne('/api/messages').error(new ProgressEvent('error'));
 
@@ -153,7 +198,7 @@ describe('MessagesService', () => {
       expect(service.messages()).toEqual([]);
     });
 
-    it('reports an error on a server error', async () => {
+    it('reports an error on a server error, without reloading', async () => {
       const sent = service.send({ to: '+15557654321', body: 'The newer message.' });
       http
         .expectOne('/api/messages')

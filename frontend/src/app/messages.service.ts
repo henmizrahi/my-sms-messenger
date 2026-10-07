@@ -39,7 +39,9 @@ export class MessagesService {
   async send(newMessage: NewMessage): Promise<SendResult> {
     try {
       const message = await firstValueFrom(this.http.post<Message>(MESSAGES_URL, newMessage));
-      this.messagesState.update((messages) => [message, ...messages]);
+      // Reload rather than insert locally, so the list always reflects the server and a
+      // history that failed to load earlier recovers.
+      await this.load();
 
       return { outcome: 'saved', message };
     } catch (error) {

@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
@@ -117,9 +119,18 @@ describe('App', () => {
       service.error.set('Could not load your messages. Please try again.');
       await fixture.whenStable();
 
-      expect(element.querySelector('.history__state')?.textContent).toBe(
+      expect(element.querySelector('.history__message')?.textContent).toBe(
         'Could not load your messages. Please try again.',
       );
+    });
+
+    it('loads again when Try again is clicked', async () => {
+      service.error.set('Could not load your messages. Please try again.');
+      await fixture.whenStable();
+
+      element.querySelector<HTMLButtonElement>('.history__retry')!.click();
+
+      expect(service.load).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -202,5 +213,74 @@ describe('App', () => {
       expect(formError()).toBeNull();
       expect(service.send).toHaveBeenCalledTimes(2);
     });
+  });
+});
+
+describe('App with the real MessagesService', () => {
+  let fixture: ComponentFixture<App>;
+  let element: HTMLElement;
+  let http: HttpTestingController;
+
+  // Lets pending promises continue, then waits for Angular to render the result.
+  async function settle() {
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(App);
+    element = fixture.nativeElement as HTMLElement;
+    http = TestBed.inject(HttpTestingController);
+    await fixture.whenStable();
+  });
+
+  afterEach(() => http.verify());
+
+  it('shows the history after a send succeeds, even though the first load failed', async () => {
+    http.expectOne({ method: 'GET', url: '/api/messages' }).error(new ProgressEvent('error'));
+    await settle();
+    expect(element.querySelector('.history__message')?.textContent).toBe(
+      'Could not load your messages. Please try again.',
+    );
+
+    const phone = element.querySelector<HTMLInputElement>('#message-to')!;
+    const body = element.querySelector<HTMLTextAreaElement>('#message-body')!;
+    phone.value = '+15551234567';
+    phone.dispatchEvent(new Event('input'));
+    body.value = 'Hello there';
+    body.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+
+    http
+      .expectOne({ method: 'POST', url: '/api/messages' })
+      .flush(savedMessage, { status: 201, statusText: 'Created' });
+    await settle();
+    http.expectOne({ method: 'GET', url: '/api/messages' }).flush([savedMessage]);
+    await settle();
+
+    expect(element.querySelector('.history__state--error')).toBeNull();
+    expect(element.querySelector('h2#message-history-title')?.textContent).toBe(
+      'Message History (1)',
+    );
+    expect(element.querySelector('.message__body')?.textContent).toBe('Hello there');
+    expect(phone.value).toBe('');
+  });
+
+  it('reloads the history when Try again is clicked', async () => {
+    http.expectOne({ method: 'GET', url: '/api/messages' }).error(new ProgressEvent('error'));
+    await settle();
+
+    element.querySelector<HTMLButtonElement>('.history__retry')!.click();
+    http.expectOne({ method: 'GET', url: '/api/messages' }).flush([savedMessage]);
+    await settle();
+
+    expect(element.querySelector('.history__state--error')).toBeNull();
+    expect(element.querySelector('.message__body')?.textContent).toBe('Hello there');
   });
 });
