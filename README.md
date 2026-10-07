@@ -1,24 +1,26 @@
 # My SMS Messenger
 
-A small web app for sending SMS messages and viewing the messages you have sent.
+A small web app for sending SMS messages and viewing the messages sent from your browser.
+
+**Live demo:** https://my-sms-messenger-syx3.onrender.com
+
+The demo runs on a free instance that sleeps when idle, so the first load takes about a minute.
 
 ## What it does
 
-- Send an SMS to a phone number in international (E.164) format, up to 250 characters.
-- See the history of messages sent from this browser, newest first, with the send status of each.
-- Each browser gets its own anonymous session; there are no accounts, and one browser cannot see another's messages.
+- Sends an SMS to a number in international (E.164) format, up to 250 characters.
+- Lists the messages sent from this browser, newest first, with the status of each.
+- Gives each browser an anonymous session. There are no accounts, and one browser cannot see another's messages.
 
 ## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Ruby 3.4, Rails 8.1 (API mode), Mongoid 9 |
-| Database | MongoDB (Atlas) |
-| SMS | Twilio (`twilio-ruby`), behind an adapter with a fake implementation |
-| Frontend | Angular 22 (standalone components, signals, zoneless), SCSS |
-| Tests | RSpec and FactoryBot (backend), Vitest (frontend) |
-
-The repository is a monorepo: the Rails API is in `backend/` and the Angular app is in `frontend/`.
+| Backend (`backend/`) | Ruby 3.4, Rails 8.1 in API mode, Mongoid 9 |
+| Database | MongoDB Atlas |
+| SMS | Twilio, behind an adapter that also has a fake implementation |
+| Frontend (`frontend/`) | Angular 22 with standalone components and signals, SCSS |
+| Tests | RSpec and FactoryBot, Vitest |
 
 ## Running locally
 
@@ -26,7 +28,7 @@ The repository is a monorepo: the Rails API is in `backend/` and the Angular app
 
 - Ruby 3.4.11 (pinned in `.ruby-version`) and Bundler
 - Node.js 22.22.3+, 24.15+ or 26+, and npm
-- A MongoDB Atlas cluster (the free tier is enough) and its connection string, with your IP address on the cluster's network access list
+- A MongoDB Atlas cluster (the free tier is enough), with your IP address on its network access list
 
 ### 1. Backend
 
@@ -36,11 +38,9 @@ bundle install
 cp .env.example .env
 ```
 
-Edit `backend/.env` and set `MONGODB_URI` to your Atlas connection string. Only the cluster address and credentials are read from it; the database name is set per environment in `config/mongoid.yml` (`mysms_development`, `mysms_test`). Leave `SMS_PROVIDER=fake` to run without Twilio.
+Set `MONGODB_URI` in `backend/.env` to your Atlas connection string. If the password contains characters such as `@` or `/`, percent-encode them. The database name comes from `config/mongoid.yml`, not from the connection string.
 
-If the password contains characters such as `@` or `/`, percent-encode them in the connection string.
-
-Create the database index, then start the server on port 3000:
+Create the database index and start the server on port 3000:
 
 ```bash
 bin/rails db:mongoid:create_indexes
@@ -57,101 +57,59 @@ npm install
 npm start
 ```
 
-Open http://localhost:4200. The Angular dev server proxies `/api` to the Rails server on port 3000 (see `frontend/proxy.conf.json`), so both must be running.
+Open http://localhost:4200. Both servers must be running.
 
-### Trying it without Twilio
+### Sending without Twilio
 
-With `SMS_PROVIDER=fake`, no SMS is sent. Any valid number is recorded as sent, except `+15005550001`, which always fails, so you can see how a failed message is shown.
+`SMS_PROVIDER=fake` is the default and sends nothing. Every valid number is recorded as sent, except `+15005550001`, which always fails so that a failed message can be seen.
 
 ## Running the tests
 
-Backend (the specs use the `mysms_test` database on the same Atlas cluster, so `MONGODB_URI` must be set):
+The backend specs use the `mysms_test` database on the same Atlas cluster, so `MONGODB_URI` must be set. They always use the fake sender and never contact Twilio.
 
 ```bash
 cd backend
 bundle exec rspec
 ```
 
-Frontend:
-
 ```bash
 cd frontend
 npm test -- --watch=false
 ```
 
-The backend specs always use the fake SMS sender, whatever `SMS_PROVIDER` is set to, and never contact Twilio.
-
-## Deployment
-
-The app deploys to [Render](https://render.com) as a single free web service, defined in `render.yaml`. Rails serves both the API and the built Angular app, so the browser sees one origin, as it does through the dev proxy locally: no CORS, and the session cookie keeps working.
-
-- **Build** (`bin/render-build.sh`): builds the Angular app, copies the output to `backend/public`, installs the gems and creates the database indexes. The build output is not committed.
-- **Start**: Puma, serving `/` from `backend/public` and `/api/*` from Rails. The health check is `/up`.
-- **Environment**: `MONGODB_URI` is entered in the Render dashboard when the service is created; `SECRET_KEY_BASE` is generated by Render; `SMS_PROVIDER` is `fake`. Production uses the `mysms_production` database.
-- **Atlas access**: the cluster's network access list must allow Render's outbound IP addresses (listed in the service's dashboard), or all addresses.
-- **Hosts**: production answers only requests for `*.onrender.com`. For a custom domain, set `ALLOWED_HOSTS` to a comma-separated list of host names.
-
-To deploy: in Render, create a new Blueprint from this repository and enter `MONGODB_URI` when prompted.
-
-The free instance sleeps after 15 minutes without traffic, and the first request after that takes about a minute while it starts again.
-
 ## Architecture
 
-### Request flow
+```
+Angular form
+  → POST /api/messages
+  → Api::MessagesController
+  → Message saved as "queued"
+  → MessageDelivery
+  → SmsSender (FakeSmsSender or TwilioSmsSender)
+  → Message updated to "sent" or "failed"
+  → 201 with the message as JSON
+```
 
-Sending a message:
+In development the Angular dev server proxies `/api` to Rails. In production Rails serves the built Angular app and the API from one origin. Either way the browser sees a single origin, so there is no CORS setup and the session cookie is first-party.
 
-1. `MessageForm` validates the input and emits `{ to, body }`.
-2. `App` passes it to `MessagesService`, which sends `POST /api/messages`.
-3. The Angular dev server proxies the request to Rails.
-4. `Api::MessagesController#create` builds a `Message` for the current session and saves it with status `queued`. Invalid input returns `422` with the validation errors.
-5. `MessageDelivery` sends the message through the configured SMS sender and updates it to `sent` (with the provider's ID) or `failed` (with the reason).
-6. The controller returns `201` with the message as JSON. The service then reloads the history from the API, and the form clears.
+Key decisions:
 
-Loading the history is `GET /api/messages`, which returns the current session's messages, newest first. A compound index on `session_id` and `created_at` serves that query.
+- **The session comes from the cookie.** The server stores a random ID in an encrypted, `HttpOnly`, `SameSite=Lax` cookie and scopes every message and query to it. The client never sends or sees the ID.
+- **Save first, then send.** A record exists whatever happens during sending, and the delivery outcome is a property of the message (`status`, `errorMessage`). The API returns `201` when the message is saved, and `422` is reserved for invalid input.
+- **SMS goes through an adapter.** `SMS_PROVIDER` selects the sender. Both senders raise the same error class, so the rest of the app does not depend on the Twilio gem.
+- **Sending is rate limited** to 10 messages a minute per session, with a looser limit per address behind it. Over the limit the API answers `429`.
+- **Sending is synchronous.** It happens inside the request, which is simple and enough at this scale. With real traffic it would move to a background job, which the `queued` status allows for.
 
-### Session cookie
-
-Rails API mode has no sessions by default, so the cookie and session middleware are added back. On a browser's first request the server stores a random UUID in an encrypted session cookie (`_mysms_session`, `HttpOnly`, `SameSite=Lax`, and `Secure` in production). Every message is saved with that ID, and every query is scoped to it. The client never sends or sees the ID.
-
-### Proxy instead of CORS
-
-The browser talks only to the Angular dev server, which forwards `/api` to Rails. The frontend and API are therefore same-origin: no CORS configuration is needed, and the session cookie is a first-party cookie that works with `SameSite=Lax`.
-
-### SMS adapter
-
-`SmsSender` chooses the sender class from the `SMS_PROVIDER` environment variable:
-
-- `fake` (default): `FakeSmsSender` sends nothing and returns a fake ID.
-- `twilio`: `TwilioSmsSender` calls the Twilio Messages API.
-
-Both expose `deliver(to:, body:)` and raise the same `SmsSender::Error` on failure, so the rest of the app does not depend on the Twilio gem. If `SMS_PROVIDER=twilio` and a Twilio variable is missing, the app refuses to boot and names the missing variable.
-
-## Key decisions
-
-- **E.164 phone numbers.** It is the format Twilio requires and it is unambiguous across countries. The API strips spaces, dashes and parentheses before validating, and the form applies the same rule, so `+1 (555) 123-4567` is accepted and stored as `+15551234567`.
-- **Save first, then send, with `queued` / `sent` / `failed`.** The message is stored before the provider is called, so a record exists whatever happens during sending, and the history shows the real outcome.
-- **`201` even when delivery fails.** The request to create the message succeeded; delivery is a property of the message (`status` and `errorMessage`), not of the HTTP request. `422` is reserved for input the API rejects, and nothing is saved in that case.
-- **camelCase JSON.** A single serializer defines the public shape (`id`, `to`, `body`, `status`, `errorMessage`, `createdAt`) in the convention the TypeScript client uses, and keeps internal fields (`session_id`, `twilio_sid`) out of responses.
-- **State as signals in a service.** `MessagesService` holds `messages`, `loading` and `error` as read-only signals and is the only place that makes HTTP calls. This is enough for one page of state without a state-management library.
-- **Presentational components.** `MessageForm`, `MessageHistory` and `MessageCard` only take inputs and emit outputs. `App` is the single component that talks to the service, which keeps the others easy to test in isolation.
-- **Sending is synchronous.** The SMS is sent inside the request, which is simple and adequate here. With real traffic it would move to a background job, which is what the `queued` status allows for.
+On the frontend, `MessagesService` holds the state as signals and is the only code that makes HTTP calls. `App` connects it to three presentational components.
 
 ## Twilio trial limitations
 
-Twilio's current trial accounts (checked October 2026) cannot use the Virtual Phone, which Twilio documents as available only in the legacy Console trial experience, and can only send predefined template bodies to verified US numbers (see the [trial SMS documentation](https://www.twilio.com/docs/usage/trials/try-out-sms) and the [Virtual Phone guide](https://www.twilio.com/docs/messaging/guides/guide-to-using-the-twilio-virtual-phone)). A free-text message to an arbitrary number therefore cannot be delivered from a trial account.
+Twilio's current trial accounts can only send predefined template messages to verified US numbers (see the [trial SMS documentation](https://www.twilio.com/docs/usage/trials/try-out-sms)), so a free-text message to an arbitrary number cannot be delivered from one.
 
-For that reason `SMS_PROVIDER=fake` is the default. The real `TwilioSmsSender` was verified against the live Twilio API with a trial account: Twilio rejected the request with
+The fake provider is therefore the default, here and in the live demo. The real `TwilioSmsSender` was verified against the live Twilio API: Twilio rejected the request, and the app stored the message as `failed` with Twilio's reason, as designed for a provider error.
 
-> No Twilio trial phone number is assigned for messaging to this destination number. Please add the 'to' number as a verified recipient.
+A full Twilio account needs no code change, only `SMS_PROVIDER=twilio` and the three `TWILIO_` variables listed in `backend/.env.example`.
 
-and the app stored the message as `failed` with that reason and returned it to the UI, which is the designed behaviour for a provider error.
+## Deployment
 
-Switching to a full Twilio account needs no code change, only these lines in `backend/.env`:
-
-```
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=<your Account SID>
-TWILIO_AUTH_TOKEN=<your Auth Token>
-TWILIO_FROM_NUMBER=<your Twilio number in E.164 format>
-```
+The app runs on [Render](https://render.com) as a single web service defined in `render.yaml`. The build script (`bin/render-build.sh`) builds the Angular app into `backend/public`, and Rails serves it alongside the API. `MONGODB_URI` is set in the Render dashboard.
