@@ -4,16 +4,7 @@ import { NewMessage } from './message';
 import { MessageForm } from './message-form/message-form';
 import { MessageHistory } from './message-history/message-history';
 import { MessagesService } from './messages.service';
-
-const FIELD_LABELS: Record<string, string> = { to: 'Phone number', body: 'Message' };
-
-function describeValidationErrors(errors: Record<string, string[]>): string {
-  const sentences = Object.entries(errors).flatMap(([field, problems]) =>
-    problems.map((problem) => `${FIELD_LABELS[field] ?? field} ${problem}.`),
-  );
-
-  return sentences.join(' ') || 'The message could not be saved.';
-}
+import { describeValidationErrors } from './validation-errors';
 
 @Component({
   imports: [MessageForm, MessageHistory],
