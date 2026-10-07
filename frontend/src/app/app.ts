@@ -47,6 +47,9 @@ export class App implements OnInit {
       case 'invalid':
         this.sendError.set(describeValidationErrors(result.errors));
         break;
+      case 'rateLimited':
+        this.sendError.set('Too many messages, wait a minute and try again.');
+        break;
       case 'error':
         this.sendError.set('Could not send the message. Please try again.');
         break;

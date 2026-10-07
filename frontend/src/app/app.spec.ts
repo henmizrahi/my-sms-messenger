@@ -193,6 +193,16 @@ describe('App', () => {
       expect(formError()).toBe('The message could not be saved.');
     });
 
+    it('keeps the values and asks the user to wait when the rate limit is reached', async () => {
+      await submitForm();
+      await finishSend({ outcome: 'rateLimited' });
+
+      expect(formError()).toBe('Too many messages, wait a minute and try again.');
+      expect(phone().value).toBe('+1 (555) 123-4567');
+      expect(body().value).toBe('Hello there');
+      expect(submitButton().disabled).toBe(false);
+    });
+
     it('keeps the values and shows a generic message on a network or server error', async () => {
       await submitForm();
       await finishSend({ outcome: 'error' });

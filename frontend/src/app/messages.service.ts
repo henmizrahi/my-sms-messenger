@@ -7,6 +7,7 @@ import { Message, NewMessage } from './message';
 export type SendResult =
   | { outcome: 'saved'; message: Message }
   | { outcome: 'invalid'; errors: Record<string, string[]> }
+  | { outcome: 'rateLimited' }
   | { outcome: 'error' };
 
 const MESSAGES_URL = '/api/messages';
@@ -47,6 +48,9 @@ export class MessagesService {
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 422) {
         return { outcome: 'invalid', errors: error.error?.errors ?? {} };
+      }
+      if (error instanceof HttpErrorResponse && error.status === 429) {
+        return { outcome: 'rateLimited' };
       }
 
       return { outcome: 'error' };

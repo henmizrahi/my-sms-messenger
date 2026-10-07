@@ -16,10 +16,14 @@ RSpec.configure do |config|
 
   # Use `create(:message)` / `build(:message)` without the FactoryBot prefix.
   config.include FactoryBot::Syntax::Methods
+  config.include ActiveSupport::Testing::TimeHelpers
 
   # Start every example from an empty database. Mongoid.truncate! deletes all
   # documents but keeps collections and their indexes.
   config.before(:each) { Mongoid.truncate! }
+
+  # Rate-limit counters live in the cache; start each example with none.
+  config.before(:each) { Rails.cache.clear }
 
   config.filter_rails_from_backtrace!
 end

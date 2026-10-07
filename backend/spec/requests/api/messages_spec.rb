@@ -83,6 +83,55 @@ RSpec.describe "Messages API", type: :request do
       expect(set_cookie).to match(/httponly/i)
       expect(set_cookie).to match(/samesite=lax/i)
     end
+
+    it "keeps the session cookie for 30 days" do
+      post "/api/messages", params: valid_params, as: :json
+
+      expires = Array(response.headers["Set-Cookie"]).join("\n")[/expires=([^;]+)/i, 1]
+      # A tolerance, because 30 calendar days can differ from 30 x 24 hours across a clock change.
+      expect(Time.zone.parse(expires)).to be_within(2.hours).of(30.days.from_now)
+    end
+
+    describe "rate limiting" do
+      it "allows 10 messages a minute, then answers 429 without saving or sending" do
+        10.times { post "/api/messages", params: valid_params, as: :json }
+        expect(response).to have_http_status(:created)
+
+        post "/api/messages", params: valid_params, as: :json
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(response.parsed_body).to eq("error" => "Too many messages. Wait a minute and try again.")
+        expect(Message.count).to eq(10)
+      end
+
+      it "counts each browser session separately" do
+        first_browser = open_session
+        second_browser = open_session
+        11.times { first_browser.post "/api/messages", params: valid_params, as: :json }
+
+        second_browser.post "/api/messages", params: valid_params, as: :json
+
+        expect(first_browser.response).to have_http_status(:too_many_requests)
+        expect(second_browser.response).to have_http_status(:created)
+      end
+
+      it "allows sending again after a minute" do
+        11.times { post "/api/messages", params: valid_params, as: :json }
+        expect(response).to have_http_status(:too_many_requests)
+
+        travel_to 61.seconds.from_now do
+          post "/api/messages", params: valid_params, as: :json
+        end
+
+        expect(response).to have_http_status(:created)
+      end
+
+      it "does not limit reading the history" do
+        15.times { get "/api/messages" }
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
   end
 
   describe "GET /api/messages" do
@@ -105,6 +154,23 @@ RSpec.describe "Messages API", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.pluck("body")).to eq(%w[newest middle oldest])
+    end
+
+    it "returns at most the 100 newest messages" do
+      post "/api/messages", params: valid_params, as: :json
+      session_id = Message.last.session_id
+      Message.collection.insert_many(
+        Array.new(104) do |i|
+          { session_id: session_id, to: "+15551234567", body: "older #{i}", status: "sent", created_at: (i + 1).minutes.ago }
+        end
+      )
+
+      get "/api/messages"
+
+      bodies = response.parsed_body.pluck("body")
+      expect(bodies.size).to eq(100)
+      expect(bodies.first).to eq("Hello there")
+      expect(bodies.last).to eq("older 98")
     end
 
     it "does not show one session's messages to another" do

@@ -190,6 +190,19 @@ describe('MessagesService', () => {
       expect(service.messages()).toEqual([olderMessage]);
     });
 
+    it('reports a rate limit on 429, without reloading', async () => {
+      const sent = service.send({ to: '+15557654321', body: 'The newer message.' });
+      http
+        .expectOne('/api/messages')
+        .flush(
+          { error: 'Too many messages. Wait a minute and try again.' },
+          { status: 429, statusText: 'Too Many Requests' },
+        );
+
+      expect(await sent).toEqual({ outcome: 'rateLimited' });
+      expect(service.messages()).toEqual([]);
+    });
+
     it('reports an error when the network fails, without reloading', async () => {
       const sent = service.send({ to: '+15557654321', body: 'The newer message.' });
       http.expectOne('/api/messages').error(new ProgressEvent('error'));

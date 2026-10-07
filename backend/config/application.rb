@@ -28,7 +28,8 @@ module MySmsMessenger
       key: "_mysms_session",
       httponly: true,
       same_site: :lax,
-      secure: Rails.env.production?
+      secure: Rails.env.production?,
+      expire_after: 30.days
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use config.session_store, config.session_options
   end
