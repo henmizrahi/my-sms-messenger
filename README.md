@@ -104,7 +104,7 @@ On the frontend, `MessagesService` holds the state as signals and is the only co
 
 ## Twilio trial limitations
 
-Twilio's current trial accounts can only send predefined template messages to verified US numbers (see the [trial SMS documentation](https://www.twilio.com/docs/usage/trials/try-out-sms)), so a free-text message to an arbitrary number cannot be delivered from one.
+The trial account could not be used as the exercise suggests: Twilio's trial messaging page only allows sending a predefined template message to a verified phone number, and the trial API has the same limits (see the [trial SMS documentation](https://www.twilio.com/docs/usage/trials/try-out-sms)). A free-text message from the app therefore cannot be delivered.
 
 The fake provider is therefore the default, here and in the live demo. The real `TwilioSmsSender` was verified against the live Twilio API: Twilio rejected the request, and the app stored the message as `failed` with Twilio's reason, as designed for a provider error.
 
