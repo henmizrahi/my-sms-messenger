@@ -1,0 +1,23 @@
+# Render Blueprint: one free web service in which Rails serves both the API and
+# the built Angular app, so the browser sees a single origin.
+services:
+  - type: web
+    name: my-sms-messenger
+    runtime: ruby
+    plan: free
+    buildCommand: ./bin/render-build.sh
+    startCommand: cd backend && bundle exec puma -C config/puma.rb
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: BUNDLE_WITHOUT
+        value: development:test
+      - key: NODE_VERSION
+        value: 24.21.0
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: SMS_PROVIDER
+        value: fake

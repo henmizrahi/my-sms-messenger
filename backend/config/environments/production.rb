@@ -12,8 +12,9 @@ Rails.application.configure do
   # Full error reports are disabled.
   config.consider_all_requests_local = false
 
-  # Cache assets for far-future expiry since they are all digest stamped.
-  config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
+  # Rails serves the built Angular app from public/. index.html is not digest
+  # stamped, so make browsers revalidate instead of caching for a fixed time.
+  config.public_file_server.headers = { "cache-control" => "public, no-cache" }
 
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
@@ -47,12 +48,10 @@ Rails.application.configure do
   # the I18n.default_locale when a translation cannot be found).
   config.i18n.fallbacks = true
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Only answer requests for the expected hosts: Render's domain by default, or a
+  # comma-separated list in ALLOWED_HOSTS (for a custom domain or a local run).
+  config.hosts = ENV.fetch("ALLOWED_HOSTS", ".onrender.com").split(",")
+
+  # Render's health check does not send the public host name.
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end

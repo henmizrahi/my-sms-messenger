@@ -25,3 +25,6 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
+# The built Angular app, copied here by bin/render-build.sh.
+/public
+
